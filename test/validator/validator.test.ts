@@ -237,4 +237,87 @@ describe('ValidationProvider', () => {
       expect(diags.filter((d) => d.message.includes('Unknown directive'))).toHaveLength(0);
     });
   });
+
+  describe('cross-reference validation — use_backend / default_backend', () => {
+    it('passes when use_backend references a defined backend', () => {
+      const text = [
+        'frontend http',
+        '    use_backend web',
+        'backend web',
+        '    balance roundrobin',
+      ].join('\n');
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('web'))).toHaveLength(0);
+    });
+
+    it('warns when use_backend references an undefined backend', () => {
+      const text = 'frontend http\n    use_backend missing\n';
+      const diags = validate(text);
+      const ref = diags.filter((d) => d.message.includes('missing'));
+      expect(ref).toHaveLength(1);
+      expect(ref[0]?.severity).toBe(DiagnosticSeverity.Warning);
+    });
+
+    it('warns when default_backend references an undefined backend', () => {
+      const text = 'frontend http\n    default_backend fallback\n';
+      const diags = validate(text);
+      expect(diags.some((d) => d.message.includes('fallback'))).toBe(true);
+    });
+
+    it('passes when use_backend references a listen section', () => {
+      const text = [
+        'frontend http',
+        '    use_backend stats-listener',
+        'listen stats-listener',
+        '    bind *:8404',
+      ].join('\n');
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('stats-listener'))).toHaveLength(0);
+    });
+
+    it('reports multiple missing backend references independently', () => {
+      const text = [
+        'frontend http',
+        '    use_backend ghost1',
+        '    default_backend ghost2',
+      ].join('\n');
+      const diags = validate(text);
+      const refs = diags.filter((d) => d.message.includes('ghost'));
+      expect(refs).toHaveLength(2);
+    });
+
+    it('skips dynamic backend selection using format expressions', () => {
+      const text = 'frontend http\n    use_backend %[req.cook(SERVERID)]\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('use_backend'))).toHaveLength(0);
+    });
+
+    it('is case-insensitive for backend name matching', () => {
+      const text = [
+        'frontend http',
+        '    use_backend Web',
+        'backend web',
+        '    balance roundrobin',
+      ].join('\n');
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('Web'))).toHaveLength(0);
+    });
+
+    it('passes with multiple backends all referenced correctly', () => {
+      const text = [
+        'frontend http',
+        '    use_backend api',
+        '    default_backend web',
+        'backend api',
+        '    server s1 10.0.0.1:80',
+        'backend web',
+        '    server s2 10.0.0.2:80',
+      ].join('\n');
+      const diags = validate(text);
+      const refDiags = diags.filter((d) =>
+        d.message.includes('api') || d.message.includes('web')
+      );
+      expect(refDiags).toHaveLength(0);
+    });
+  });
 });

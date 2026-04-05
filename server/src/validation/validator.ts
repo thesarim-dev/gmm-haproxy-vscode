@@ -47,7 +47,48 @@ export class ValidationProvider {
       if (diagnostics.length >= MAX_DIAGNOSTICS) return diagnostics;
     }
 
+    this.validateCrossReferences(doc, diagnostics);
+
     return diagnostics;
+  }
+
+  /**
+   * Check that every use_backend / default_backend reference resolves to
+   * a backend or listen section defined in the same document.
+   *
+   * Emits a Warning (not Error) because multi-file deployments may define
+   * the target backend in another included config file.
+   */
+  private validateCrossReferences(doc: HaproxyDocument, out: Diagnostic[]): void {
+    // Build the set of defined backend/listen names (case-insensitive)
+    const defined = new Set<string>();
+    for (const section of doc.sections) {
+      if ((section.type === 'backend' || section.type === 'listen') && section.name) {
+        defined.add(section.name.toLowerCase());
+      }
+    }
+
+    for (const section of doc.sections) {
+      for (const directive of section.directives) {
+        if (out.length >= MAX_DIAGNOSTICS) return;
+
+        const kwName = directive.keyword.value.toLowerCase();
+        if (kwName !== 'use_backend' && kwName !== 'default_backend') continue;
+
+        const nameArg = directive.args[0];
+        if (!nameArg) continue;
+
+        // Skip dynamic backend selection: %[req.cook(SERVERID)], ${...}, etc.
+        if (nameArg.value.startsWith('%') || nameArg.value.startsWith('$')) continue;
+
+        if (!defined.has(nameArg.value.toLowerCase())) {
+          out.push(warning(
+            toRange(nameArg.range),
+            `'${nameArg.value}' is referenced by '${kwName}' but no backend or listen section named '${nameArg.value}' is defined in this file.`
+          ));
+        }
+      }
+    }
   }
 
   private validateSection(section: HaproxySection, out: Diagnostic[]): void {
