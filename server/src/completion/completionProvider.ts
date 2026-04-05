@@ -9,6 +9,7 @@ import { HaproxyDocument, HaproxySection, SectionType } from '../parser/ast';
 import { VersionRegistry, DirectiveDefinition } from '../registry/versionRegistry';
 import { ACTIONS, ActionDef, ActionRulesets } from '../data/actions';
 import { FETCH_METHODS, PREDEFINED_ACLS, FetchMethodDef, FetchLayer } from '../data/acl';
+import { SERVER_PARAMS, ServerParamDef } from '../data/server-params';
 
 const SECTION_KEYWORDS: SectionType[] = [
   'global', 'defaults', 'frontend', 'backend', 'listen',
@@ -81,6 +82,9 @@ export class CompletionProvider {
 
       case 'acl-criterion':
         return this.fetchMethodCompletions(section);
+
+      case 'server-param':
+        return this.serverParamCompletions();
 
       default:
         return this.directiveCompletions(section);
@@ -327,6 +331,46 @@ export class CompletionProvider {
     return lines.join('\n');
   }
 
+  // ── Server parameter completions ──────────────────────────────────────────
+
+  private serverParamCompletions(): CompletionItem[] {
+    const items: CompletionItem[] = [];
+
+    for (const param of SERVER_PARAMS) {
+      const isDeprecated = param.deprecated !== undefined;
+      const item: CompletionItem = {
+        label: param.name,
+        kind: CompletionItemKind.Property,
+        detail: param.signature ? `${param.name} ${param.signature}` : param.name,
+        documentation: {
+          kind: MarkupKind.Markdown,
+          value: this.buildServerParamDoc(param, isDeprecated),
+        },
+        sortText: isDeprecated ? `z_${param.name}` : param.name,
+      };
+
+      if (isDeprecated) {
+        item.tags = [CompletionItemTag.Deprecated];
+      }
+
+      items.push(item);
+    }
+
+    return items;
+  }
+
+  private buildServerParamDoc(param: ServerParamDef, isDeprecated: boolean): string {
+    const lines: string[] = [param.description, ''];
+    lines.push(`**Since:** HAProxy ${param.since}`);
+    if (isDeprecated && param.deprecated) {
+      lines.push(`**Deprecated since:** HAProxy ${param.deprecated}`);
+    }
+    if (param.removed) {
+      lines.push(`**Removed in:** HAProxy ${param.removed}`);
+    }
+    return lines.join('\n');
+  }
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   private findSectionAtLine(doc: HaproxyDocument, line: number): HaproxySection | null {
@@ -355,7 +399,8 @@ type CompletionContext =
   | { kind: 'tcp-request-content-action' }
   | { kind: 'tcp-response-keyword' }
   | { kind: 'tcp-response-action' }
-  | { kind: 'acl-criterion' };
+  | { kind: 'acl-criterion' }
+  | { kind: 'server-param' };
 
 /**
  * Parse the line prefix up to the cursor and determine what kind of completion
@@ -419,6 +464,18 @@ function parseLineContext(linePrefix: string): CompletionContext {
     if (tokenCount === 2 && linePrefix.endsWith(' ') && second === 'content') {
       return { kind: 'tcp-response-action' };
     }
+    return { kind: 'directive' };
+  }
+
+  // server <name> <addr:port> [params...] — params start after 3rd token
+  if (first === 'server') {
+    if (tokenCount >= 3 && linePrefix.endsWith(' ')) return { kind: 'server-param' };
+    return { kind: 'directive' };
+  }
+
+  // default-server [params...] — params start after the keyword itself
+  if (first === 'default-server') {
+    if (tokenCount >= 1 && linePrefix.endsWith(' ')) return { kind: 'server-param' };
     return { kind: 'directive' };
   }
 

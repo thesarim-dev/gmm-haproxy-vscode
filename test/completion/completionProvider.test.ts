@@ -275,6 +275,72 @@ describe('CompletionProvider — ACL criterion completions', () => {
   });
 });
 
+// ── Server parameter completions ─────────────────────────────────────────
+
+describe('CompletionProvider — server parameter completions', () => {
+  it('offers server params after "server <name> <addr:port> "', () => {
+    const text = 'backend web\n    ';
+    const items = complete(text, '    server web1 10.0.0.1:80 ');
+    const labels = items.map((i) => i.label);
+    expect(labels).toContain('check');
+    expect(labels).toContain('weight');
+    expect(labels).toContain('inter');
+    expect(labels).toContain('ssl');
+    expect(labels).toContain('backup');
+  });
+
+  it('uses Property kind for server params', () => {
+    const text = 'backend web\n    ';
+    const items = complete(text, '    server web1 10.0.0.1:80 ');
+    items.forEach((i) => expect(i.kind).toBe(CompletionItemKind.Property));
+  });
+
+  it('offers more server params after an already-typed param', () => {
+    const text = 'backend web\n    ';
+    const items = complete(text, '    server web1 10.0.0.1:80 check ');
+    const labels = items.map((i) => i.label);
+    expect(labels).toContain('weight');
+    expect(labels).toContain('inter');
+  });
+
+  it('offers server params after "default-server "', () => {
+    const text = 'backend web\n    ';
+    const items = complete(text, '    default-server ');
+    const labels = items.map((i) => i.label);
+    expect(labels).toContain('check');
+    expect(labels).toContain('inter');
+    expect(labels).toContain('rise');
+    expect(labels).toContain('fall');
+    expect(labels).toContain('weight');
+  });
+
+  it('offers more default-server params after an already-typed param', () => {
+    const text = 'backend web\n    ';
+    const items = complete(text, '    default-server inter 2s ');
+    const labels = items.map((i) => i.label);
+    expect(labels).toContain('rise');
+    expect(labels).toContain('fall');
+  });
+
+  it('does not offer server params when still on the name token', () => {
+    const text = 'backend web\n    ';
+    const items = complete(text, '    server web1 ');
+    const labels = items.map((i) => i.label);
+    // Only 2 tokens — should fall back to directive completions, not server params
+    expect(labels).not.toContain('check');
+    expect(labels).toContain('balance'); // directive completions
+  });
+
+  it('includes documentation for server params', () => {
+    const text = 'backend web\n    ';
+    const items = complete(text, '    server web1 10.0.0.1:80 ');
+    const checkItem = items.find((i) => i.label === 'check');
+    expect(checkItem?.documentation).toBeDefined();
+    const doc = checkItem?.documentation as { kind: string; value: string };
+    expect(doc.value).toMatch(/health check|Since/i);
+  });
+});
+
 // ── Context detection edge cases ──────────────────────────────────────────
 
 describe('CompletionProvider — context edge cases', () => {
