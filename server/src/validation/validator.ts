@@ -1,8 +1,23 @@
 import { Diagnostic, DiagnosticSeverity, Range } from 'vscode-languageserver/node';
 import { HaproxyDocument, HaproxySection, HaproxyDirective, SourceRange } from '../parser/ast';
 import { VersionRegistry } from '../registry/versionRegistry';
+import { ACTIONS, ActionRulesets } from '../data/actions';
 
 const MAX_DIAGNOSTICS = 100;
+
+/**
+ * Maps a fully-resolved directive name (e.g. "tcp-request connection") to the
+ * ActionRulesets key and the arg index that contains the action sub-keyword.
+ */
+const ACTION_DIRECTIVE_RULESETS: Record<string, { key: keyof ActionRulesets; actionArgIdx: number }> = {
+  'http-request':            { key: 'httpReq', actionArgIdx: 0 },
+  'http-response':           { key: 'httpRes', actionArgIdx: 0 },
+  'http-after-response':     { key: 'httpAft', actionArgIdx: 0 },
+  'tcp-request connection':  { key: 'tcpRqCon', actionArgIdx: 1 },
+  'tcp-request session':     { key: 'tcpRqSes', actionArgIdx: 1 },
+  'tcp-request content':     { key: 'tcpRqCnt', actionArgIdx: 1 },
+  'tcp-response content':    { key: 'tcpRsCnt', actionArgIdx: 1 },
+};
 
 /**
  * Validates a parsed HAProxy document against a specific version's directive set.
@@ -47,39 +62,44 @@ export class ValidationProvider {
     section: HaproxySection,
     out: Diagnostic[]
   ): void {
-    const name = directive.keyword.value.toLowerCase();
-    const def = this.registry.getDirective(name, this.version);
+    const kwName = directive.keyword.value.toLowerCase();
+    const firstArgLower = directive.args[0]?.value.toLowerCase();
+    const combinedName = firstArgLower ? `${kwName} ${firstArgLower}` : null;
+
+    // Resolve directive: try combined name first (e.g. "tcp-request connection", "option httplog")
+    const def =
+      (combinedName ? this.registry.getDirective(combinedName, this.version) : undefined) ??
+      this.registry.getDirective(kwName, this.version);
 
     if (!def) {
-      if (!this.registry.isAvailable(name, this.version)) {
-        const nearestVersion = this.findSinceVersion(name);
-        const msg = nearestVersion
-          ? `Unknown directive '${name}'. It may be available since HAProxy ${nearestVersion}.`
-          : `Unknown directive '${name}'.`;
-        out.push(error(toRange(directive.range), msg));
-        return;
-      }
+      const nearestVersion =
+        (combinedName ? this.findSinceVersion(combinedName) : undefined) ??
+        this.findSinceVersion(kwName);
+      const displayName = combinedName ?? kwName;
+      const msg = nearestVersion
+        ? `Unknown directive '${displayName}'. It may be available since HAProxy ${nearestVersion}.`
+        : `Unknown directive '${displayName}'.`;
+      out.push(error(toRange(directive.range), msg));
+      return;
     }
-
-    if (!def) return;
 
     // Check if directive was removed in this version
     if (def.removedInVersion) {
       out.push(
         error(
           toRange(directive.keyword.range),
-          `'${name}' was removed in HAProxy ${def.removedInVersion}. ${migrationHint(name)}`
+          `'${def.name}' was removed in HAProxy ${def.removedInVersion}. ${migrationHint(def.name)}`
         )
       );
       return;
     }
 
     // Check if directive is deprecated
-    if (this.registry.isDeprecated(name, this.version)) {
+    if (this.registry.isDeprecated(def.name, this.version)) {
       out.push(
         warning(
           toRange(directive.keyword.range),
-          `'${name}' is deprecated since HAProxy ${def.deprecatedSinceVersion ?? '?'}. ${migrationHint(name)}`
+          `'${def.name}' is deprecated since HAProxy ${def.deprecatedSinceVersion ?? '?'}. ${migrationHint(def.name)}`
         )
       );
     }
@@ -89,7 +109,7 @@ export class ValidationProvider {
       out.push(
         error(
           toRange(directive.keyword.range),
-          `'${name}' is not valid in a '${section.type}' section. Valid sections: ${def.sections.join(', ')}.`
+          `'${def.name}' is not valid in a '${section.type}' section. Valid sections: ${def.sections.join(', ')}.`
         )
       );
     }
@@ -99,7 +119,7 @@ export class ValidationProvider {
       out.push(
         error(
           toRange(directive.keyword.range),
-          `'${name}' requires HTTP mode but this section is in TCP mode.`
+          `'${def.name}' requires HTTP mode but this section is in TCP mode.`
         )
       );
     }
@@ -107,9 +127,46 @@ export class ValidationProvider {
       out.push(
         error(
           toRange(directive.keyword.range),
-          `'${name}' requires TCP mode but this section is in HTTP mode.`
+          `'${def.name}' requires TCP mode but this section is in HTTP mode.`
         )
       );
+    }
+
+    // Validate action sub-keyword (e.g. http-request deny, tcp-request connection accept)
+    this.validateAction(directive, def.name, out);
+  }
+
+  private validateAction(directive: HaproxyDirective, resolvedName: string, out: Diagnostic[]): void {
+    const mapping = ACTION_DIRECTIVE_RULESETS[resolvedName];
+    if (!mapping) return;
+
+    const actionArg = directive.args[mapping.actionArgIdx];
+    if (!actionArg) return; // no action provided — incomplete line, parser will catch it
+
+    const actionName = stripParens(actionArg.value.toLowerCase());
+    const action = ACTIONS.find((a) => a.name === actionName);
+
+    if (!action) {
+      out.push(error(
+        toRange(actionArg.range),
+        `Unknown ${resolvedName} action '${actionArg.value}'.`
+      ));
+      return;
+    }
+
+    if (!action.rulesets[mapping.key]) {
+      out.push(error(
+        toRange(actionArg.range),
+        `'${actionName}' is not a valid action for '${resolvedName}'.`
+      ));
+      return;
+    }
+
+    if (action.deprecated) {
+      out.push(warning(
+        toRange(actionArg.range),
+        `'${actionName}' is deprecated since HAProxy ${action.deprecated}.`
+      ));
     }
   }
 
@@ -120,6 +177,12 @@ export class ValidationProvider {
     }
     return undefined;
   }
+}
+
+/** Strip parenthesised arguments from an action/fetch token: set-var(x) → set-var */
+function stripParens(raw: string): string {
+  const idx = raw.indexOf('(');
+  return idx === -1 ? raw : raw.slice(0, idx);
 }
 
 const MIGRATION_HINTS: Record<string, string> = {

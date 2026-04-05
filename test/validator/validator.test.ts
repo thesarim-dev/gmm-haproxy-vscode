@@ -118,4 +118,123 @@ describe('ValidationProvider', () => {
       expect(diags).toHaveLength(0);
     });
   });
+
+  describe('action sub-keyword validation — http-request/response', () => {
+    it('reports error for unknown http-request action', () => {
+      const text = 'frontend http\n    http-request unknown-action\n';
+      const diags = validate(text);
+      const actionErrors = diags.filter((d) => d.message.includes('unknown-action'));
+      expect(actionErrors).toHaveLength(1);
+      expect(actionErrors[0]?.severity).toBe(DiagnosticSeverity.Error);
+    });
+
+    it('passes for valid http-request deny action', () => {
+      const text = 'frontend http\n    http-request deny\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('deny'))).toHaveLength(0);
+    });
+
+    it('passes for valid http-request set-header action', () => {
+      const text = 'frontend http\n    http-request set-header X-Test value\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('set-header'))).toHaveLength(0);
+    });
+
+    it('reports error for action not valid in http-response', () => {
+      // auth is httpReq only
+      const text = 'backend web\n    http-response auth\n';
+      const diags = validate(text);
+      expect(diags.some((d) => d.message.includes('auth') && d.message.includes('not a valid'))).toBe(true);
+    });
+
+    it('passes for valid http-response set-header action', () => {
+      const text = 'backend web\n    http-response set-header X-Test value\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('set-header'))).toHaveLength(0);
+    });
+
+    it('reports error for unknown http-after-response action', () => {
+      const text = 'backend web\n    http-after-response fake-action\n';
+      const diags = validate(text);
+      expect(diags.some((d) => d.message.includes('fake-action'))).toBe(true);
+    });
+
+    it('passes for valid http-after-response set-header action', () => {
+      const text = 'backend web\n    http-after-response set-header X-Via proxy\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('set-header'))).toHaveLength(0);
+    });
+
+    it('handles parenthesised action names (set-var)', () => {
+      // set-var(my_var) should be stripped to set-var for lookup
+      const text = 'frontend http\n    http-request set-var(txn.user) req.cook(user)\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('set-var'))).toHaveLength(0);
+    });
+  });
+
+  describe('action sub-keyword validation — tcp-request/response', () => {
+    it('reports error for unknown tcp-request connection action', () => {
+      const text = 'frontend tcp\n    tcp-request connection not-an-action\n';
+      const diags = validate(text);
+      expect(diags.some((d) => d.message.includes('not-an-action'))).toBe(true);
+    });
+
+    it('passes for valid tcp-request connection accept', () => {
+      const text = 'frontend tcp\n    tcp-request connection accept\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('accept'))).toHaveLength(0);
+    });
+
+    it('passes for valid tcp-request connection reject', () => {
+      const text = 'frontend tcp\n    tcp-request connection reject\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('reject'))).toHaveLength(0);
+    });
+
+    it('reports error for action not valid in tcp-request connection', () => {
+      // set-header is httpReq only
+      const text = 'frontend tcp\n    tcp-request connection set-header X-Test val\n';
+      const diags = validate(text);
+      expect(diags.some((d) => d.message.includes('set-header') && d.message.includes('not a valid'))).toBe(true);
+    });
+
+    it('passes for valid tcp-request content set-var', () => {
+      const text = 'frontend tcp\n    tcp-request content set-var(txn.x) int(1)\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('set-var'))).toHaveLength(0);
+    });
+
+    it('passes for valid tcp-response content set-var', () => {
+      const text = 'backend web\n    tcp-response content set-var(txn.y) int(2)\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('set-var'))).toHaveLength(0);
+    });
+
+    it('passes for tcp-request inspect-delay (no action to validate)', () => {
+      const text = 'frontend tcp\n    tcp-request inspect-delay 5s\n';
+      const diags = validate(text);
+      expect(diags).toHaveLength(0);
+    });
+  });
+
+  describe('compound directive resolution', () => {
+    it('resolves option httplog as a known directive', () => {
+      const text = 'frontend http\n    option httplog\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('Unknown directive'))).toHaveLength(0);
+    });
+
+    it('reports error for unknown option variant', () => {
+      const text = 'backend web\n    option not-a-real-option\n';
+      const diags = validate(text);
+      expect(diags.some((d) => d.message.includes('Unknown directive'))).toBe(true);
+    });
+
+    it('resolves tcp-request connection as a known directive', () => {
+      const text = 'frontend tcp\n    tcp-request connection accept\n';
+      const diags = validate(text);
+      expect(diags.filter((d) => d.message.includes('Unknown directive'))).toHaveLength(0);
+    });
+  });
 });
