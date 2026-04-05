@@ -31,6 +31,7 @@ export class HaproxyParser {
       const rawLine = lines[lineIndex] ?? '';
       const line = stripComment(rawLine);
       const trimmed = line.trim();
+      const indentLength = line.length - line.trimStart().length;
 
       if (trimmed === '') continue;
 
@@ -42,7 +43,7 @@ export class HaproxyParser {
         fullLine = fullLine.slice(0, -1).trim() + ' ' + stripComment(nextRaw).trim();
       }
 
-      const tokens = tokenizeLine(fullLine, lineIndex);
+      const tokens = tokenizeLine(fullLine, lineIndex, indentLength);
       if (tokens.length === 0) continue;
 
       const firstToken = tokens[0];
@@ -165,7 +166,7 @@ function stripComment(line: string): string {
   return line;
 }
 
-function tokenizeLine(line: string, lineIndex: number): Token[] {
+function tokenizeLine(line: string, lineIndex: number, startOffset = 0): Token[] {
   const tokens: Token[] = [];
   let i = 0;
 
@@ -174,7 +175,7 @@ function tokenizeLine(line: string, lineIndex: number): Token[] {
     while (i < line.length && /\s/.test(line[i] ?? '')) i++;
     if (i >= line.length) break;
 
-    const start = i;
+    const start = i + startOffset;
     let value = '';
 
     if (line[i] === '"' || line[i] === "'") {
@@ -196,7 +197,7 @@ function tokenizeLine(line: string, lineIndex: number): Token[] {
     if (value !== '') {
       tokens.push({
         value,
-        range: makeRange(lineIndex, start, lineIndex, i),
+        range: makeRange(lineIndex, start, lineIndex, i + startOffset),
       });
     }
   }

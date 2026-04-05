@@ -19,6 +19,7 @@ module.exports = {
     'server/src/validation/**/*.ts',
     'server/src/registry/**/*.ts',
     'server/src/completion/**/*.ts',
+    'server/src/hover/**/*.ts',
     '!**/*.d.ts',
   ],
   coverageThreshold: {

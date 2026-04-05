@@ -1,9 +1,12 @@
-import { Hover, MarkupKind, Position } from 'vscode-languageserver/node';
-import { HaproxyDocument, HaproxySection, HaproxyDirective } from '../parser/ast';
+import { Hover, MarkupKind, Position, Range } from 'vscode-languageserver/node';
+import { HaproxyDocument, HaproxySection, HaproxyDirective, SourceRange, Token } from '../parser/ast';
 import { VersionRegistry, DirectiveDefinition } from '../registry/versionRegistry';
+import { ACTIONS, ActionDef } from '../data/actions';
+import { FETCH_METHODS, PREDEFINED_ACLS, FetchMethodDef, PredefinedAcl } from '../data/acl';
 
 /**
- * Provides hover documentation for HAProxy directives.
+ * Provides hover documentation for HAProxy directives, action sub-keywords,
+ * and ACL fetch method criteria.
  */
 export class HoverProvider {
   constructor(
@@ -12,68 +15,89 @@ export class HoverProvider {
   ) {}
 
   provideHover(doc: HaproxyDocument, position: Position): Hover | null {
-    const hit = this.findDirectiveAtPosition(doc, position);
-    if (!hit) return null;
+    const target = this.findHoverTarget(doc, position);
+    if (!target) return null;
 
-    const { directive, section } = hit;
-    const name = directive.keyword.value.toLowerCase();
-    const def = this.registry.getDirective(name, this.version);
+    switch (target.type) {
+      case 'directive-keyword': {
+        const kwName = target.directive.keyword.value.toLowerCase();
+        // Try combined "keyword arg[0]" first (e.g. "option httplog", "no option http-server-close")
+        const firstArg = target.directive.args[0]?.value.toLowerCase();
+        const combinedName = firstArg ? `${kwName} ${firstArg}` : null;
+        const def =
+          (combinedName ? this.registry.getDirective(combinedName, this.version) : undefined) ??
+          this.registry.getDirective(kwName, this.version);
+        if (!def) return null;
+        return {
+          contents: { kind: MarkupKind.Markdown, value: this.buildDirectiveContent(def, target.section) },
+          range: toRange(target.directive.keyword.range),
+        };
+      }
 
-    if (!def) return null;
+      case 'action': {
+        const action = ACTIONS.find((a) => a.name === target.name);
+        if (!action) return null;
+        return {
+          contents: { kind: MarkupKind.Markdown, value: this.buildActionContent(action, target.parentDirective) },
+          range: toRange(target.token.range),
+        };
+      }
 
-    return {
-      contents: {
-        kind: MarkupKind.Markdown,
-        value: this.buildHoverContent(def, section),
-      },
-      range: {
-        start: {
-          line: directive.keyword.range.startLine,
-          character: directive.keyword.range.startCharacter,
-        },
-        end: {
-          line: directive.keyword.range.endLine,
-          character: directive.keyword.range.endCharacter,
-        },
-      },
-    };
+      case 'fetch-method': {
+        // Try exact fetch method match first
+        const method = FETCH_METHODS.find((m) => m.name === target.name);
+        if (method) {
+          return {
+            contents: { kind: MarkupKind.Markdown, value: this.buildFetchMethodContent(method) },
+            range: toRange(target.token.range),
+          };
+        }
+        // Try fetch method declination (e.g. path_beg → path)
+        const parent = FETCH_METHODS.find((m) => m.aclDeclinations?.includes(target.name));
+        if (parent) {
+          return {
+            contents: { kind: MarkupKind.Markdown, value: this.buildFetchDeclContent(target.name, parent) },
+            range: toRange(target.token.range),
+          };
+        }
+        // Try pre-defined ACL (case-sensitive names like TRUE, FALSE, METH_GET)
+        const predef = PREDEFINED_ACLS.find((p) => p.name === target.name);
+        if (predef) {
+          return {
+            contents: { kind: MarkupKind.Markdown, value: this.buildPredefinedAclContent(predef) },
+            range: toRange(target.token.range),
+          };
+        }
+        return null;
+      }
+    }
   }
 
-  private buildHoverContent(def: DirectiveDefinition, section: HaproxySection): string {
+  // ── Hover content builders ───────────────────────────────────────────────
+
+  private buildDirectiveContent(def: DirectiveDefinition, section: HaproxySection): string {
     const isDeprecated = this.registry.isDeprecated(def.name, this.version);
     const lines: string[] = [];
 
-    // Title line
     lines.push(`**\`${def.name}\`** \`${def.signature}\``);
     lines.push('---');
-
-    // Description
     lines.push(def.description);
     lines.push('');
-
-    // Valid sections
     lines.push(`**Valid in:** ${def.sections.join(', ')}`);
 
-    // Version info
-    const versionInfo: string[] = [`**Since:** HAProxy ${def.sinceVersion}`];
+    const versionParts: string[] = [`**Since:** HAProxy ${def.sinceVersion}`];
     if (isDeprecated && def.deprecatedSinceVersion) {
-      versionInfo.push(`~~**Deprecated in:** ${def.deprecatedSinceVersion}~~`);
+      versionParts.push(`~~**Deprecated in:** ${def.deprecatedSinceVersion}~~`);
     }
     if (def.removedInVersion) {
-      versionInfo.push(`**Removed in:** ${def.removedInVersion}`);
+      versionParts.push(`**Removed in:** ${def.removedInVersion}`);
     }
-    lines.push(versionInfo.join('  |  '));
+    lines.push(versionParts.join('  |  '));
 
-    // Mode constraint
     if (def.httpOnly) lines.push('**Requires:** HTTP mode');
-    if (def.tcpOnly) lines.push('**Requires:** TCP mode');
+    if (def.tcpOnly)  lines.push('**Requires:** TCP mode');
+    if (section.mode) lines.push(`**Current mode:** ${section.mode}`);
 
-    // Current section context
-    if (section.mode) {
-      lines.push(`**Current mode:** ${section.mode}`);
-    }
-
-    // Docs link
     if (def.docsUrl) {
       lines.push('');
       lines.push(`[📖 HAProxy Docs](${def.docsUrl})`);
@@ -82,31 +106,206 @@ export class HoverProvider {
     return lines.join('\n');
   }
 
-  private findDirectiveAtPosition(
-    doc: HaproxyDocument,
-    position: Position
-  ): { directive: HaproxyDirective; section: HaproxySection } | null {
+  private buildActionContent(action: ActionDef, parentDirective: string): string {
+    const lines: string[] = [];
+
+    const sigPart = action.signature ? ` \`${action.signature}\`` : '';
+    lines.push(`**\`${action.name}\`**${sigPart}`);
+    lines.push('---');
+    lines.push(action.description);
+    lines.push('');
+    lines.push(`**Rule set:** \`${parentDirective}\``);
+    lines.push(`**Valid in:** ${describeRulesets(action.rulesets)}`);
+    lines.push(`**Since:** HAProxy ${action.since}`);
+
+    if (action.deprecated) {
+      lines.push(`~~**Deprecated in:** ${action.deprecated}~~`);
+    }
+
+    return lines.join('\n');
+  }
+
+  private buildFetchMethodContent(method: FetchMethodDef): string {
+    const lines: string[] = [];
+
+    const sigPart = method.signature ? `\`${method.signature}\`` : '';
+    lines.push(`**\`${method.name}\`** ${sigPart} → \`${method.outputType}\``);
+    lines.push('---');
+    lines.push(method.description);
+    lines.push('');
+    lines.push(`**Layer:** ${method.layer}  |  **Since:** HAProxy ${method.since}`);
+
+    if (method.aclDeclinations && method.aclDeclinations.length > 1) {
+      lines.push('');
+      lines.push(`**ACL variants:** \`${method.aclDeclinations.join('`  `')}\``);
+    }
+
+    return lines.join('\n');
+  }
+
+  private buildFetchDeclContent(declName: string, parent: FetchMethodDef): string {
+    const lines: string[] = [];
+
+    lines.push(`**\`${declName}\`** → \`${parent.outputType}\``);
+    lines.push('---');
+    lines.push(`ACL declination of \`${parent.name}\`.`);
+    lines.push('');
+    lines.push(parent.description);
+    lines.push('');
+    lines.push(`**Layer:** ${parent.layer}  |  **Since:** HAProxy ${parent.since}`);
+    lines.push('');
+    lines.push(`**All variants:** \`${(parent.aclDeclinations ?? [parent.name]).join('`  `')}\``);
+
+    return lines.join('\n');
+  }
+
+  private buildPredefinedAclContent(predef: PredefinedAcl): string {
+    const lines: string[] = [];
+
+    lines.push(`**\`${predef.name}\`** *(pre-defined ACL)*`);
+    lines.push('---');
+    lines.push(predef.description);
+    lines.push('');
+    lines.push(`**Equivalent to:** \`${predef.equivalent}\``);
+
+    return lines.join('\n');
+  }
+
+  // ── Target detection ─────────────────────────────────────────────────────
+
+  private findHoverTarget(doc: HaproxyDocument, position: Position): HoverTarget | null {
     for (const section of doc.sections) {
-      if (section.headerRange.startLine === position.line) {
-        return null; // Hovering on section header — not a directive
-      }
+      // Skip section header lines
+      if (section.headerRange.startLine === position.line) return null;
+
       for (const directive of section.directives) {
+        // Quick range gate: directive must span the cursor line
         if (
-          directive.range.startLine <= position.line &&
-          directive.range.endLine >= position.line
+          directive.range.startLine > position.line ||
+          directive.range.endLine < position.line
         ) {
-          // Check if hovering over the keyword token specifically
-          const kw = directive.keyword;
+          continue;
+        }
+
+        // 1. Check keyword token
+        const hit = this.checkToken(directive.keyword, position);
+        if (hit) {
+          return { type: 'directive-keyword', directive, section };
+        }
+
+        // 2. Check arg tokens
+        const kwName = directive.keyword.value.toLowerCase();
+        for (let i = 0; i < directive.args.length; i++) {
+          const arg = directive.args[i];
+          if (!arg) continue;
+          if (!this.checkToken(arg, position)) continue;
+
+          // http-request / http-response / http-after-response → args[0] is the action
           if (
-            position.line === kw.range.startLine &&
-            position.character >= kw.range.startCharacter &&
-            position.character <= kw.range.endCharacter
+            i === 0 &&
+            (kwName === 'http-request' || kwName === 'http-response' || kwName === 'http-after-response')
           ) {
-            return { directive, section };
+            return {
+              type: 'action',
+              name: stripFetchArgs(arg.value.toLowerCase()),
+              parentDirective: kwName,
+              token: arg,
+              section,
+            };
+          }
+
+          // tcp-request / tcp-response → args[0] is the sub-type, args[1] is the action
+          if (i === 1 && (kwName === 'tcp-request' || kwName === 'tcp-response')) {
+            const subType = directive.args[0]?.value.toLowerCase() ?? '';
+            if (subType === 'connection' || subType === 'session' || subType === 'content') {
+              return {
+                type: 'action',
+                name: stripFetchArgs(arg.value.toLowerCase()),
+                parentDirective: `${kwName} ${subType}`,
+                token: arg,
+                section,
+              };
+            }
+          }
+
+          // acl → args[0] is the ACL name, args[1] is the criterion
+          if (i === 1 && kwName === 'acl') {
+            // Strip parenthesised arguments: hdr(host) → hdr, req.cook(name) → req.cook
+            const criterion = stripFetchArgs(arg.value);
+            return {
+              type: 'fetch-method',
+              name: criterion,
+              token: arg,
+              section,
+            };
           }
         }
       }
     }
     return null;
   }
+
+  /** Returns true if the cursor position is within the token's range. */
+  private checkToken(token: Token, position: Position): boolean {
+    return (
+      position.line === token.range.startLine &&
+      position.character >= token.range.startCharacter &&
+      position.character <= token.range.endCharacter
+    );
+  }
+}
+
+// ── Discriminated union for hover targets ────────────────────────────────
+
+type HoverTarget =
+  | {
+      type: 'directive-keyword';
+      directive: HaproxyDirective;
+      section: HaproxySection;
+    }
+  | {
+      type: 'action';
+      name: string;
+      parentDirective: string;
+      token: Token;
+      section: HaproxySection;
+    }
+  | {
+      type: 'fetch-method';
+      name: string;
+      token: Token;
+      section: HaproxySection;
+    };
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+function toRange(r: SourceRange): Range {
+  return {
+    start: { line: r.startLine, character: r.startCharacter },
+    end:   { line: r.endLine,   character: r.endCharacter   },
+  };
+}
+
+/**
+ * Strip the parenthesised argument from a fetch method name so that
+ * `hdr(host)` → `hdr` and `req.cook(session_id)` → `req.cook`.
+ * Also preserves the exact case for pre-defined ACL lookups (TRUE, METH_GET, etc.).
+ */
+function stripFetchArgs(raw: string): string {
+  const parenIndex = raw.indexOf('(');
+  return parenIndex === -1 ? raw : raw.slice(0, parenIndex);
+}
+
+/** Human-readable ruleset summary for action hover. */
+function describeRulesets(rs: import('../data/actions').ActionRulesets): string {
+  const parts: string[] = [];
+  if (rs.httpReq)  parts.push('`http-request`');
+  if (rs.httpRes)  parts.push('`http-response`');
+  if (rs.httpAft)  parts.push('`http-after-response`');
+  if (rs.tcpRqCon) parts.push('`tcp-request connection`');
+  if (rs.tcpRqSes) parts.push('`tcp-request session`');
+  if (rs.tcpRqCnt) parts.push('`tcp-request content`');
+  if (rs.tcpRsCnt) parts.push('`tcp-response content`');
+  if (rs.quicIni)  parts.push('`quic-initial`');
+  return parts.join(', ');
 }

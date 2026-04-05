@@ -130,7 +130,7 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "jest --testPathPattern=\"test/(parser|validator|completion)\"",
+    "test:unit": "jest --testPathPattern=\"test/(parser|validator|completion|hover)\"",
     "test:integration": "node ./test/integration/runTests.js",
     "package": "vsce package",
     "publish": "vsce publish"

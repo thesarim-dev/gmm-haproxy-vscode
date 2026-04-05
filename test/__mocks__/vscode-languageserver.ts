@@ -12,6 +12,8 @@ export enum CompletionItemKind {
   Property = 10,
   Value = 12,
   Reference = 18,
+  Function = 3,
+  Constant = 21,
 }
 
 export enum CompletionItemTag {
