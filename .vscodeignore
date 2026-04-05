@@ -1,0 +1,15 @@
+**/.git/**
+**/.github/**
+**/node_modules/**
+**/src/**
+**/*.test.ts
+**/*.map
+test/**
+coverage/**
+.eslintrc.json
+tsconfig*.json
+CLAUDE.md
+.gitignore
+*.log
+client/tsconfig.json
+server/tsconfig.json
