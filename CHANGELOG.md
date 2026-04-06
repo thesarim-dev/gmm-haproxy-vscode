@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-04-06
+
+### Fixed
+- Document symbols (Outline panel) crashed with `TypeError: Cannot read properties of undefined (reading 'range')` — caused by using `Number.MAX_SAFE_INTEGER` as a character position, which exceeds the LSP `uinteger` max of `2147483647`
+- `option forceclose` had no data entry — deprecation warning was never generated, making the quick fix silently unavailable
+- Added smoke test: every entry in `SAFE_REPLACEMENTS` is now verified to produce a real deprecation warning at test time
+
+### Changed
+- README updated with real screenshots for all features
+- Settings panel screenshot added to Configuration section
+- CI badge URL corrected to `JuanTorchia/gmm-haproxy-vscode`
+
 ## [0.1.0] — 2026-04-05
 
 ### Added

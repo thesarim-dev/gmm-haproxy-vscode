@@ -3,7 +3,7 @@
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/gmm.gmm-haproxy-vscode?label=VS%20Code%20Marketplace&logo=visualstudiocode&logoColor=white&color=0078d4)](https://marketplace.visualstudio.com/items?itemName=gmm.gmm-haproxy-vscode)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/gmm.gmm-haproxy-vscode?label=Installs&color=0078d4)](https://marketplace.visualstudio.com/items?itemName=gmm.gmm-haproxy-vscode)
 [![Rating](https://img.shields.io/visual-studio-marketplace/stars/gmm.gmm-haproxy-vscode?label=Rating&color=0078d4)](https://marketplace.visualstudio.com/items?itemName=gmm.gmm-haproxy-vscode)
-[![CI](https://github.com/gmm/gmm-haproxy-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/gmm/gmm-haproxy-vscode/actions/workflows/ci.yml)
+[![CI](https://github.com/JuanTorchia/gmm-haproxy-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/JuanTorchia/gmm-haproxy-vscode/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **The missing IDE experience for HAProxy.** Stop memorizing directive names, guessing valid options, and discovering config errors only when HAProxy refuses to start.
@@ -17,7 +17,7 @@
 ### Syntax Highlighting
 Every token in your HAProxy config gets meaningful color — section headers, directives, ACL names, backend references, IP addresses, ports, and timeouts.
 
-![Syntax highlighting demo](images/demo-syntax.gif)
+![Syntax highlighting](docs/images/01-syntax-highlighting.png)
 
 ---
 
@@ -29,7 +29,11 @@ Context-aware suggestions that know which directives are valid in each section. 
 - Deprecated directives shown with strikethrough
 - Every suggestion includes signature and documentation
 
-![Autocompletion demo](images/demo-completion.gif)
+![Autocompletion — directive suggestions](docs/images/02-completion-ba.png)
+
+![Autocompletion — algorithm values](docs/images/02-completion-balance.png)
+
+![Autocompletion — http-request actions](docs/images/02-completion-http.png)
 
 ---
 
@@ -40,25 +44,47 @@ Select your HAProxy version and get real-time diagnostics tailored to it. Direct
 - **Warnings** — deprecated directives with upgrade hints
 - **Cross-references** — `use_backend` pointing to an undefined backend
 
-![Validation demo](images/demo-validation.gif)
+![Validation — syntax error](docs/images/03-validation-error.png)
+
+![Validation — deprecation warning](docs/images/03-validation-warning.png)
+
+![Validation — undefined backend reference](docs/images/03-validation-warning-backend.png)
 
 ---
 
 ### Hover Documentation
 Hover over any directive for instant reference: signature, description, valid sections, version availability, and a direct link to the HAProxy docs.
 
-```
-bind  [<address>]:<port_range> [param*]
-──────────────────────────────────────
-Define the listening address and port for a frontend.
+![Hover — balance algorithms](docs/images/04-hover-balance.png)
 
-Valid in: frontend, listen
-Since: HAProxy 1.0
+![Hover — http-request](docs/images/04-hover-http-request.png)
 
-📖 HAProxy Docs →
-```
+![Hover — option httpchk](docs/images/04-hover-httpchk.png)
 
-![Hover demo](images/demo-hover.gif)
+![Hover — stick-table](docs/images/04-hover-stick-table.png)
+
+![Hover — timeout](docs/images/04-hover-timeout.png)
+
+---
+
+### Go-to-Definition
+Press `F12` (or `Ctrl+Click`) on any backend name in a `use_backend` or `default_backend` directive to jump directly to its definition.
+
+![Go-to-definition](docs/images/05-definition.gif)
+
+---
+
+### Section Folding
+Collapse and expand individual HAProxy sections to focus on what matters.
+
+![Section folding](docs/images/06-folding.png)
+
+---
+
+### Quick Fix — Deprecated Directives
+Deprecated directives get a warning with a lightbulb quick fix. One click replaces the directive with the modern equivalent.
+
+![Quick fix for deprecated directive](docs/images/08-code-action.png)
 
 ---
 
@@ -78,8 +104,6 @@ Start typing a section name and get a fully-formed boilerplate with tabstops. No
 | `use_backend` | Conditional backend routing |
 | `server` | Server line with health check params |
 | `httpchk` | HTTP health check option |
-
-![Snippets demo](images/demo-snippets.gif)
 
 ---
 
@@ -102,8 +126,6 @@ Validate your config against the exact HAProxy version running in production. Sw
 
 The status bar shows your active version at all times. Click it to switch instantly.
 
-![Version selector demo](images/demo-version.gif)
-
 ---
 
 ## Installation
@@ -125,6 +147,8 @@ The extension activates automatically when you open any `.cfg` or `.conf` file n
 ## Configuration
 
 All settings are available under `File → Preferences → Settings → HAProxy`.
+
+![Settings panel](docs/images/settings.png)
 
 | Setting | Default | Description |
 |---|---|---|
@@ -173,23 +197,15 @@ This extension brings the config editing experience up to the same level as edit
 
 ---
 
-## Known Limitations
-
-- Go-to-definition for backend/frontend cross-references is planned for v1.1
-- Configs over 10,000 lines disable live validation (syntax highlighting still works)
-- Remote/SSH file editing is not supported in the initial release
-
----
-
 ## Contributing
 
-Issues and pull requests are welcome at [github.com/gmm/gmm-haproxy-vscode](https://github.com/gmm/gmm-haproxy-vscode).
+Issues and pull requests are welcome at [github.com/JuanTorchia/gmm-haproxy-vscode](https://github.com/JuanTorchia/gmm-haproxy-vscode).
 
 **To run locally:**
 ```bash
-git clone https://github.com/gmm/gmm-haproxy-vscode
+git clone https://github.com/JuanTorchia/gmm-haproxy-vscode
 cd gmm-haproxy-vscode
-npm install
+npm install --legacy-peer-deps
 npm run compile
 ```
 
@@ -199,9 +215,6 @@ Then press `F5` in VS Code to open an Extension Development Host with the extens
 - `npm run lint` must pass
 - `npm run compile` must pass
 - `npm test` must pass
-- New directives should include a test in `test/validator/`
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
 ---
 

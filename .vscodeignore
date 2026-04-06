@@ -8,7 +8,7 @@
 **/*.d.ts
 test/**
 coverage/**
-docs/**
+docs/demo-configs/**
 out/**
 .claude/**
 .eslintrc.json
