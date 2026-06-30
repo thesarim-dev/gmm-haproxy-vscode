@@ -50,6 +50,10 @@ export interface HaproxySection {
   readonly type: SectionType;
   /** The name after the section keyword, e.g. `http-in` in `frontend http-in`. May be empty. */
   readonly name: string;
+  /** Token for the section name, carrying its source range. Absent for unnamed sections (global, anonymous defaults). */
+  readonly nameToken?: Token;
+  /** Token for the named defaults section inherited via `from <name>` in the section header. Absent if not specified. */
+  readonly from?: Token;
   readonly headerRange: SourceRange;
   readonly directives: readonly HaproxyDirective[];
   /**

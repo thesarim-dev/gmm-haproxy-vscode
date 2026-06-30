@@ -2,6 +2,7 @@ import { Diagnostic, DiagnosticSeverity, Range } from 'vscode-languageserver/nod
 import { HaproxyDocument, HaproxySection, HaproxyDirective, SourceRange } from '../parser/ast';
 import { VersionRegistry } from '../registry/versionRegistry';
 import { ACTIONS, ActionRulesets } from '../data/actions';
+import { validateCrossReferences, validateUnreferencedSymbols } from './validatorCrossRef';
 
 const MAX_DIAGNOSTICS = 100;
 
@@ -47,51 +48,34 @@ export class ValidationProvider {
       if (diagnostics.length >= MAX_DIAGNOSTICS) return diagnostics;
     }
 
-    this.validateCrossReferences(doc, diagnostics);
+    validateCrossReferences(doc, diagnostics);
+    validateUnreferencedSymbols(doc, diagnostics);
 
     return diagnostics;
   }
 
-  /**
-   * Check that every use_backend / default_backend reference resolves to
-   * a backend or listen section defined in the same document.
-   *
-   * Emits a Warning (not Error) because multi-file deployments may define
-   * the target backend in another included config file.
-   */
-  private validateCrossReferences(doc: HaproxyDocument, out: Diagnostic[]): void {
-    // Build the set of defined backend/listen names (case-insensitive)
-    const defined = new Set<string>();
-    for (const section of doc.sections) {
-      if ((section.type === 'backend' || section.type === 'listen') && section.name) {
-        defined.add(section.name.toLowerCase());
+  private validateSection(section: HaproxySection, out: Diagnostic[]): void {
+    // use-server cross-reference: server must be defined in the same section
+    if (section.type === 'backend' || section.type === 'listen') {
+      const definedServers = new Set<string>();
+      for (const dir of section.directives) {
+        const kw = dir.keyword.value.toLowerCase();
+        if (kw === 'server' || kw === 'server-template') {
+          const a = dir.args[0];
+          if (a) definedServers.add(a.value.toLowerCase());
+        }
       }
-    }
-
-    for (const section of doc.sections) {
-      for (const directive of section.directives) {
-        if (out.length >= MAX_DIAGNOSTICS) return;
-
-        const kwName = directive.keyword.value.toLowerCase();
-        if (kwName !== 'use_backend' && kwName !== 'default_backend') continue;
-
-        const nameArg = directive.args[0];
-        if (!nameArg) continue;
-
-        // Skip dynamic backend selection: %[req.cook(SERVERID)], ${...}, etc.
-        if (nameArg.value.startsWith('%') || nameArg.value.startsWith('$')) continue;
-
-        if (!defined.has(nameArg.value.toLowerCase())) {
-          out.push(warning(
-            toRange(nameArg.range),
-            `'${nameArg.value}' is referenced by '${kwName}' but no backend or listen section named '${nameArg.value}' is defined in this file.`
-          ));
+      for (const dir of section.directives) {
+        if (out.length >= MAX_DIAGNOSTICS) break;
+        if (dir.keyword.value.toLowerCase() !== 'use-server') continue;
+        const a = dir.args[0];
+        if (a && !definedServers.has(a.value.toLowerCase())) {
+          out.push(error(toRange(a.range),
+            `'${a.value}' is referenced by 'use-server' but no server named '${a.value}' is defined in this section.`));
         }
       }
     }
-  }
 
-  private validateSection(section: HaproxySection, out: Diagnostic[]): void {
     for (const directive of section.directives) {
       this.validateDirective(directive, section, out);
       if (out.length >= MAX_DIAGNOSTICS) return;

@@ -54,11 +54,21 @@ export class HaproxyParser {
         if (currentSection) {
           sections.push(currentSection.build());
         }
-        const nameToken = tokens[1];
+
+        // Detect optional `from <defaults-name>` clause in the section header
+        const fromIdx = tokens.findIndex((t, i) => i > 0 && t.value.toLowerCase() === 'from');
+        const fromToken = fromIdx !== -1 ? tokens[fromIdx + 1] : undefined;
+
+        // tokens[1] is the section name unless it is the `from` keyword itself
+        const rawNameToken = tokens[1];
+        const nameToken = rawNameToken?.value.toLowerCase() !== 'from' ? rawNameToken : undefined;
         const name = nameToken?.value ?? '';
+
         currentSection = new SectionBuilder(
           keyword as SectionType,
           name,
+          nameToken,
+          fromToken,
           makeRange(lineIndex, 0, lineIndex, rawLine.length)
         );
       } else if (currentSection) {
@@ -89,6 +99,8 @@ class SectionBuilder {
   constructor(
     private readonly type: SectionType,
     private readonly name: string,
+    private readonly sectionNameToken: Token | undefined,
+    private readonly fromToken: Token | undefined,
     private readonly headerRange: SourceRange
   ) {}
 
@@ -105,6 +117,8 @@ class SectionBuilder {
     return {
       type: this.type,
       name: this.name,
+      nameToken: this.sectionNameToken,
+      from: this.fromToken,
       headerRange: this.headerRange,
       directives: this.directives,
       mode,
@@ -113,14 +127,24 @@ class SectionBuilder {
 }
 
 function resolveMode(sections: HaproxySection[]): void {
-  const defaultsSection = sections.find((s) => s.type === 'defaults');
-  const defaultMode = defaultsSection?.mode;
+  // Index all defaults sections by name (empty string = the unnamed/global defaults)
+  const defaultsByName = new Map<string, HaproxySection>();
+  for (const s of sections) {
+    if (s.type === 'defaults') {
+      defaultsByName.set(s.name.toLowerCase(), s);
+    }
+  }
 
   for (const section of sections) {
     if (section.type !== 'frontend' && section.type !== 'backend' && section.type !== 'listen') {
       continue;
     }
-    if (!section.mode && defaultMode) {
+    if (section.mode) continue;
+
+    // Use the named defaults referenced by `from`, falling back to the unnamed defaults.
+    const key = section.from ? section.from.value.toLowerCase() : '';
+    const defaultMode = defaultsByName.get(key)?.mode;
+    if (defaultMode) {
       // Cast required because mode is readonly — we mutate during build resolution only
       (section as { mode?: 'http' | 'tcp' }).mode = defaultMode;
     }

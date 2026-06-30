@@ -976,6 +976,34 @@ export const GLOBAL_DIRECTIVES: DirectiveDef[] = [
     category: 'ssl',
   },
 
+  // ─── HAPEE MODULE SYSTEM ──────────────────────────────────────────────────
+  // HAProxy Enterprise (HAPEE) directives for loading dynamic modules.
+
+  {
+    name: 'module-path',
+    signature: 'module-path <directory>',
+    description: 'Set the directory where HAProxy Enterprise will search for dynamic modules (.so files).',
+    sections: GLOBAL,
+    since: '1.8',
+    category: 'misc',
+  },
+  {
+    name: 'module-load',
+    signature: 'module-load <module.so>',
+    description: 'Load a HAProxy Enterprise dynamic module from the module-path directory.',
+    sections: GLOBAL,
+    since: '1.8',
+    category: 'misc',
+  },
+  {
+    name: 'waf-load',
+    signature: 'waf-load <rules-file>',
+    description: 'Load a WAF rules file for the hapee-lb-wafadvanced module (HAProxy Enterprise).',
+    sections: GLOBAL,
+    since: '1.8',
+    category: 'misc',
+  },
+
   // ─── OCSP UPDATE ──────────────────────────────────────────────────────────
 
   {

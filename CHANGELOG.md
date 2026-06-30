@@ -6,6 +6,43 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-06-30 ([@RevLaw](https://github.com/RevLaw))
+
+### Added
+- **Named defaults sections**: `defaults http` syntax supported — section name highlighted, `from <name>` clause highlighted as keyword + type; grammar, parser, and AST all updated
+- **Go to Definition / Find References / Peek** for all named cross-references:
+  - Backends / listen — `use_backend`, `default_backend`, section headers
+  - ACLs — `acl <name>` definitions ↔ `if`/`unless` conditions (including negated `!name`), section-scoped
+  - Servers — `server <name>` ↔ `use-server <name>`, section-scoped
+  - Named defaults — `from <name>` ↔ `defaults <name>` section
+  - Cache — `cache <name>` ↔ `http-request cache-use` / `http-response cache-store`
+  - Userlist — `userlist <name>` ↔ `http_auth(<name>)` / `http_auth_group(<name>)`, precise sub-range
+  - Resolvers — `resolvers <name>` ↔ `resolvers` param in `server` lines
+  - Peers — `peers <name>` ↔ `stick-table … peers <name>`
+- **Document highlights** for all symbol types above (definition in green, references in blue)
+- **Rename symbol** (F2) for all symbol types — ACL negation `!name` renames name-only
+- **Smart cross-reference completions**: `use_backend`, `default_backend`, `from`, `if`/`unless`, `use-server`, `cache-use`, `cache-store`, `resolvers`, `stick-table peers` all offer IntelliSense lists from the current file
+- **Cross-reference validation**:
+  - `from <name>` referencing undefined named defaults → Warning
+  - `use-server <name>` with no matching server in section → Error
+  - `http-request cache-use` / `http-response cache-store` with undefined cache → Warning
+- **Unreferenced-symbol diagnostics**:
+  - Backend never referenced by `use_backend`/`default_backend` → Information
+  - Named defaults never referenced by `from` → Information
+  - ACL defined but never used in `if`/`unless` → Information
+  - SPOE backends (name contains `spoe`) are exempt
+- **HAProxy Enterprise (HAPEE) module support**:
+  - `module-path`, `module-load`, `waf-load` recognized as valid global directives
+  - `module-path` directory existence validated → Warning if missing
+  - `module-load` file existence validated against `module-path` → Warning if missing
+  - `waf-load` file existence validated → Warning if missing
+
+### Changed
+- `DefinitionProvider` rewritten to delegate to shared `symbolResolver`
+- `HaproxySection` AST now carries `nameToken` and `from` token with source ranges
+- Mode inheritance now resolves correctly through named defaults `from` chains
+- `symbolResolver` moved to `shared/` — eliminates cross-provider directory imports
+
 ## [0.1.2] — 2026-04-06
 
 ### Fixed

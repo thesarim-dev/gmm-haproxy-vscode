@@ -20,6 +20,12 @@ import {
   CodeActionParams,
   FoldingRange,
   FoldingRangeParams,
+  DocumentHighlight,
+  DocumentHighlightParams,
+  ReferenceParams,
+  WorkspaceEdit,
+  RenameParams,
+  PrepareRenameParams,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { HaproxyParser } from './parser/parser';
@@ -34,6 +40,9 @@ import { CodeActionsProvider } from './codeactions/codeActionsProvider';
 import { FoldingProvider } from './folding/foldingProvider';
 import { VersionRegistry } from './registry/versionRegistry';
 import { ServerSettings, DEFAULT_SETTINGS } from './settings';
+import { DocumentHighlightProvider } from './highlights/documentHighlightProvider';
+import { ReferencesProvider } from './references/referencesProvider';
+import { RenameProvider } from './rename/renameProvider';
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments<TextDocument>(TextDocument);
@@ -63,6 +72,9 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       documentFormattingProvider: true,
       documentSymbolProvider: true,
       definitionProvider: true,
+      referencesProvider: true,
+      documentHighlightProvider: true,
+      renameProvider: { prepareProvider: true },
       codeActionProvider: true,
       foldingRangeProvider: true,
     },
@@ -139,6 +151,30 @@ connection.onDefinition((params: DefinitionParams): Location | null => {
   const ast = astCache.get(params.textDocument.uri);
   if (!ast) return null;
   return new DefinitionProvider().provideDefinition(ast, params.position);
+});
+
+connection.onDocumentHighlight((params: DocumentHighlightParams): DocumentHighlight[] => {
+  const ast = astCache.get(params.textDocument.uri);
+  if (!ast) return [];
+  return new DocumentHighlightProvider().provideHighlights(ast, params.position);
+});
+
+connection.onReferences((params: ReferenceParams): Location[] => {
+  const ast = astCache.get(params.textDocument.uri);
+  if (!ast) return [];
+  return new ReferencesProvider().provideReferences(ast, params.position, params.context.includeDeclaration);
+});
+
+connection.onPrepareRename((params: PrepareRenameParams) => {
+  const ast = astCache.get(params.textDocument.uri);
+  if (!ast) return null;
+  return new RenameProvider().prepareRename(ast, params.position);
+});
+
+connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
+  const ast = astCache.get(params.textDocument.uri);
+  if (!ast) return null;
+  return new RenameProvider().provideRename(ast, params.position, params.newName);
 });
 
 connection.onDocumentSymbol((params: DocumentSymbolParams): DocumentSymbol[] => {
