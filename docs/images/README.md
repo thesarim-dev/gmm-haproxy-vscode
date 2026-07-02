@@ -1,19 +1,21 @@
-# Screenshots
+# Demo Images
 
-Poné las capturas acá. Nombres sugeridos:
+This directory contains Marketplace and README visuals for the extension.
 
-| Archivo | Descripción |
-|---|---|
-| `syntax-highlighting.png` | Syntax highlighting en un config HAProxy |
-| `completion.gif` | Autocompletado en acción (animado) |
-| `validation.png` | Error/warning de validación con mensaje |
-| `hover.png` | Hover con documentación de una directiva |
-| `definition.gif` | Go-to-definition de backend |
-| `folding.png` | Folding de secciones |
-| `symbols.png` | Outline panel con símbolos del documento |
-| `code-action.gif` | Quick fix de directiva deprecated |
+## Regenerating GIFs
 
-En el README se referencian como:
-```markdown
-![Autocompletado](docs/images/completion.gif)
+Install ImageMagick and run:
+
+```bash
+npm run demo:gifs
 ```
+
+The script generates:
+
+| Output | Source frames |
+|---|---|
+| `02-completion.gif` | `02-completion-ba.png`, `02-completion-balance.png`, `02-completion-http.png` |
+| `03-validation.gif` | `03-validation-error.png`, `03-validation-warning.png`, `03-validation-warning-backend.png` |
+| `04-hover.gif` | `04-hover-balance.png`, `04-hover-http-request.png`, `04-hover-httpchk.png`, `04-hover-stick-table.png`, `04-hover-timeout.png` |
+
+Keep source frames committed. They make demo updates reviewable and let contributors regenerate GIFs without manual editing.

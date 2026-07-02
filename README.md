@@ -39,11 +39,7 @@ Context-aware suggestions that know which directives are valid in each section. 
 - Deprecated directives shown with strikethrough
 - Every suggestion includes signature and documentation
 
-![Autocompletion — directive suggestions](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/02-completion-ba.png)
-
-![Autocompletion — algorithm values](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/02-completion-balance.png)
-
-![Autocompletion — http-request actions](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/02-completion-http.png)
+![Autocompletion demo](docs/images/02-completion.gif)
 
 ---
 
@@ -54,26 +50,14 @@ Select your HAProxy version and get real-time diagnostics tailored to it. Direct
 - **Warnings** — deprecated directives with upgrade hints
 - **Cross-references** — `use_backend` pointing to an undefined backend
 
-![Validation — syntax error](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/03-validation-error.png)
-
-![Validation — deprecation warning](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/03-validation-warning.png)
-
-![Validation — undefined backend reference](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/03-validation-warning-backend.png)
+![Validation diagnostics demo](docs/images/03-validation.gif)
 
 ---
 
 ### Hover Documentation
 Hover over any directive for instant reference: signature, description, valid sections, version availability, and a direct link to the HAProxy docs.
 
-![Hover — balance algorithms](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/04-hover-balance.png)
-
-![Hover — http-request](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/04-hover-http-request.png)
-
-![Hover — option httpchk](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/04-hover-httpchk.png)
-
-![Hover — stick-table](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/04-hover-stick-table.png)
-
-![Hover — timeout](https://raw.githubusercontent.com/JuanTorchia/gmm-haproxy-vscode-assets/main/04-hover-timeout.png)
+![Hover documentation demo](docs/images/04-hover.gif)
 
 ---
 

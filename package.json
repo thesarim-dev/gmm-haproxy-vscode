@@ -156,6 +156,7 @@
     "test:integration": "node ./test/integration/runTests.js",
     "package": "vsce package",
     "package:check": "node scripts/check-vsix-contents.cjs",
+    "demo:gifs": "node scripts/generate-demo-gifs.cjs",
     "publish": "vsce publish"
   },
   "devDependencies": {
