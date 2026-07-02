@@ -143,12 +143,44 @@ See [docs/release.md](docs/release.md) for the full policy.
 
 ---
 
+## Demo Visuals
+
+Every editor-visible change should keep the README and Marketplace demos current.
+
+Update demo visuals when a pull request changes:
+
+- syntax highlighting, token scopes, or grammar behavior
+- completion lists, labels, details, sorting, or documentation
+- diagnostics, warning/error wording, related information, or quick fixes
+- hover contents, signatures, version labels, or documentation links
+- go-to-definition, folding, symbols, formatting, snippets, or settings UI
+- README or Marketplace positioning for a feature
+
+Use committed source frames in `docs/images/` and regenerate animated GIFs with:
+
+```bash
+npm run demo:gifs
+```
+
+The generated GIFs are:
+
+- `docs/images/02-completion.gif`
+- `docs/images/03-validation.gif`
+- `docs/images/04-hover.gif`
+
+If a UI-affecting change does not need a new demo, explain that in the pull request. Examples: the visual output is unchanged, the feature is not shown in README yet, or the change is covered by an existing screenshot.
+
+See [docs/images/README.md](docs/images/README.md) for the full visual asset workflow.
+
+---
+
 ## Pull Request Checklist
 
 - [ ] `npm run lint` passes
 - [ ] `npm run compile` passes
 - [ ] `npm run test:unit` passes
 - [ ] `CHANGELOG.md` updated, or the PR is internal-only and does not need a changelog entry
+- [ ] Demo GIFs/screenshots updated, or the PR explains why visual assets are not affected
 - [ ] New directives have validator tests
 - [ ] New language features have unit tests
 - [ ] Coverage stays above 80% on modified modules

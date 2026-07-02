@@ -111,9 +111,23 @@ Do not publish unless all checks pass:
 - `npm audit --audit-level=high`
 - `npm run build`
 - `npx vsce package --no-dependencies`
+- `npm run demo:gifs` when README or Marketplace demo visuals changed.
 - Package inspection confirms no secrets, local-only files, source maps, test files, or generated junk are bundled.
 
 Publishing must happen from GitHub Actions, not from a local machine.
+
+## Demo Visuals
+
+README and Marketplace demos must match the released behavior.
+
+Before release:
+
+1. Review README feature sections against the current extension behavior.
+2. If completion, validation, hover, or other captured editor behavior changed, update the PNG source frames in `docs/images/`.
+3. Run `npm run demo:gifs` to regenerate animated demos.
+4. Commit both source frame updates and generated GIFs.
+
+Do not publish a release with stale demos for user-visible editor behavior.
 
 ## Packaging Safety
 

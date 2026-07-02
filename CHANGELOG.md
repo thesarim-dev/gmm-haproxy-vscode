@@ -8,6 +8,9 @@ See [docs/release.md](docs/release.md) for changelog and release-note rules.
 
 ## [Unreleased]
 
+### Added
+- Contributor and release documentation now require README and Marketplace demo GIFs/screenshots to stay current with editor-visible changes.
+
 ## [0.2.1] — 2026-07-02
 
 ### Added

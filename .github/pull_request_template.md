@@ -16,6 +16,7 @@ Describe what changed and why.
 - [ ] `npm run lint`
 - [ ] `npm run compile`
 - [ ] `npm run test:unit`
+- [ ] `npm run demo:gifs`, if README or Marketplace demos changed
 - [ ] Manual VS Code extension test, if UI behavior changed
 
 ## Changelog
@@ -29,3 +30,4 @@ Describe what changed and why.
 - [ ] No runtime dependency was added.
 - [ ] User-facing diagnostics or completion text is actionable.
 - [ ] HAProxy version behavior is covered by tests when relevant.
+- [ ] Demo GIFs/screenshots are updated, or this PR does not affect visual behavior.
