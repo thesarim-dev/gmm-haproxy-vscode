@@ -200,6 +200,8 @@ The most useful contributions are small and specific: missing directive metadata
 Useful starting points:
 
 - [Roadmap](ROADMAP.md) — what is planned for v1.0 and later
+- [Discussions](https://github.com/JuanTorchia/gmm-haproxy-vscode/discussions) — share HAProxy editing pain points and help shape future milestones
+- [v0.3.0 milestone](https://github.com/JuanTorchia/gmm-haproxy-vscode/milestone/1) — current candidate work
 - [Good first issues](GOOD_FIRST_ISSUES.md) — small, useful starter tasks
 - [Contributing guide](CONTRIBUTING.md) — setup, tests, project layout, PR expectations
 - [Support](SUPPORT.md) — where to report bugs, request features, or ask questions

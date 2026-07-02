@@ -6,6 +6,8 @@ Good first places to start:
 
 - [Good first issues](GOOD_FIRST_ISSUES.md)
 - [Roadmap](ROADMAP.md)
+- [Discussions](https://github.com/JuanTorchia/gmm-haproxy-vscode/discussions)
+- [v0.3.0 milestone](https://github.com/JuanTorchia/gmm-haproxy-vscode/milestone/1)
 - [Support guide](SUPPORT.md)
 - [Release and changelog policy](docs/release.md)
 
