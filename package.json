@@ -2,7 +2,7 @@
   "name": "gmm-haproxy-vscode",
   "displayName": "HAProxy Config",
   "description": "Full language support for HAProxy configuration files — syntax highlighting, autocompletion, validation, hover docs, snippets, and formatting. Multi-version support from 2.4 LTS to 3.1.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "gmm",
   "author": {
     "name": "Juan Torchia",
@@ -152,7 +152,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "jest --testPathPatterns=\"test/(parser|validator|completion|hover|grammar|formatter|symbols|definition|codeactions|folding)\"",
+    "test:unit": "jest --testPathPattern=\"test[/\\\\](parser|validator|completion|hover|grammar|formatter|symbols|definition|codeactions|folding)[/\\\\]\"",
     "test:integration": "node ./test/integration/runTests.js",
     "package": "vsce package",
     "package:check": "node scripts/check-vsix-contents.cjs",

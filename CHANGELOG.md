@@ -8,10 +8,15 @@ See [docs/release.md](docs/release.md) for changelog and release-note rules.
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-07-02
+
 ### Added
 - Release and changelog policy documenting how GitHub Release notes and VS Code Marketplace notes must be derived from `CHANGELOG.md`.
 - VS Code package contents guard that blocks publishing when local credentials, keys, source maps, tests, or generated junk would be bundled.
 - Growth-oriented README and contributor guidance that explains the extension's value for DevOps/SRE users and points Marketplace users back to GitHub.
+
+### Fixed
+- Unit test script now targets unit suites explicitly after the Jest upgrade, keeping VS Code integration tests in the integration runner.
 
 ## [0.2.0] — 2026-06-30 ([@RevLaw](https://github.com/RevLaw))
 
