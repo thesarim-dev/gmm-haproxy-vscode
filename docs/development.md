@@ -117,6 +117,31 @@ ESLint with `@typescript-eslint` strict rules. CI blocks merge on lint errors.
 
 ---
 
+## Troubleshooting local runs
+
+If the extension does not behave as expected when running locally, try the following first:
+
+- Install the workspace dependencies in all three places before testing:
+
+  ```bash
+  npm ci
+  npm ci --legacy-peer-deps --prefix client
+  npm ci --legacy-peer-deps --prefix server
+  ```
+
+- Run a fresh build before pressing `F5`:
+
+  ```bash
+  npm run build
+  ```
+
+- If you are debugging activation or LSP issues, open the Output panel and switch to the `HAProxy` channel. For more detailed logs, use `HAProxy (Trace)`.
+- To restart the language server after changing server-side code, run the command `HAProxy: Restart Language Server` from the Command Palette.
+- On Windows, the first local run can fail with a PowerShell execution policy error. If you see a message about scripts being blocked, open PowerShell as Administrator and run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then reopen VS Code and try `F5` again.
+- A common cause of confusing local results is stale bundles in `client/out` or `server/out`. Re-running `npm run build` usually clears this up.
+
+---
+
 ## ESLint Configuration (`.eslintrc.json`)
 
 Key rules enforced:
