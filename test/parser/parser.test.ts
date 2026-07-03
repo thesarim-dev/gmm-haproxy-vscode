@@ -1,4 +1,6 @@
 import { HaproxyParser } from '../../server/src/parser/parser';
+import fs from 'fs';
+import path from 'path';
 
 describe('HaproxyParser', () => {
   const parser = new HaproxyParser();
@@ -114,5 +116,29 @@ describe('HaproxyParser', () => {
     const doc = parser.parse(text, 'test://comment-line');
     expect(doc.sections[0]?.directives).toHaveLength(1);
     expect(doc.sections[0]?.directives[0]?.keyword.value).toBe('balance');
+  });
+
+  it('parses the TLS termination fixture', () => {
+    const text = fs.readFileSync(
+      path.join(__dirname, '../fixtures/tls-termination.cfg'),
+      'utf8',
+    );
+
+    const doc = parser.parse(text, 'test://tls');
+
+    expect(doc.parseErrors).toHaveLength(0);
+
+    expect(doc.sections.some((s) => s.type === 'frontend')).toBe(true);
+    expect(doc.sections.some((s) => s.type === 'backend')).toBe(true);
+
+    const httpsIn = doc.sections.find(
+      (s) => s.type === 'frontend' && s.name === 'https-in',
+    );
+
+    expect(httpsIn).toBeDefined();
+    expect(httpsIn?.directives.some((d) => d.keyword.value === 'bind')).toBe(true);
+    expect(
+      httpsIn?.directives.some((d) => d.keyword.value === 'use_backend'),
+    ).toBe(true);
   });
 });

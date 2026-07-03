@@ -2,6 +2,8 @@ import { HaproxyParser } from '../../server/src/parser/parser';
 import { ValidationProvider } from '../../server/src/validation/validator';
 import { VersionRegistry } from '../../server/src/registry/versionRegistry';
 import { Diagnostic, DiagnosticSeverity } from '../__mocks__/vscode-languageserver';
+import fs from 'fs';
+import path from 'path';
 
 const parser = new HaproxyParser();
 const registry = new VersionRegistry();
@@ -599,6 +601,22 @@ describe('ValidationProvider', () => {
       const d = validate('frontend http\n    use_backend ghost\n')
         .filter((diag) => diag.message.includes('ghost'));
       expect(d).toHaveLength(1);
+    });
+  });
+
+  describe('fixtures', () => {
+    it('validates the TLS termination fixture without errors', () => {
+      const text = fs.readFileSync(
+        path.join(__dirname, '../fixtures/tls-termination.cfg'),
+        'utf8',
+      );
+
+      const diags = validate(text);
+
+      const doc = parser.parse(text, 'test://fixture');
+
+      expect(doc.sections.length).toBeGreaterThan(0);
+      expect(diags).toHaveLength(0);
     });
   });
 });
