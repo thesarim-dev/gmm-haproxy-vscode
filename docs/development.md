@@ -117,28 +117,6 @@ ESLint with `@typescript-eslint` strict rules. CI blocks merge on lint errors.
 
 ---
 
-## Publishing Changes
-
-When you are ready to share work from this repository:
-
-```bash
-# Create or switch to a feature branch
-git checkout -b feat/short-description
-
-# Stage the files you changed
-git add docs/development.md
-
-# Commit with a clear message
-git commit -m "docs(development): add publishing workflow"
-
-# Push the current branch to GitHub
-git push -u origin HEAD
-```
-
-If you are already on the correct branch, `git push -u origin HEAD` is the quickest way to publish it without typing the branch name manually.
-
----
-
 ## Troubleshooting local runs
 
 If the extension does not behave as expected when running locally, try the following first:
