@@ -117,6 +117,28 @@ ESLint with `@typescript-eslint` strict rules. CI blocks merge on lint errors.
 
 ---
 
+## Publishing Changes
+
+When you are ready to share work from this repository:
+
+```bash
+# Create or switch to a feature branch
+git checkout -b feat/short-description
+
+# Stage the files you changed
+git add docs/development.md
+
+# Commit with a clear message
+git commit -m "docs(development): add publishing workflow"
+
+# Push the current branch to GitHub
+git push -u origin HEAD
+```
+
+If you are already on the correct branch, `git push -u origin HEAD` is the quickest way to publish it without typing the branch name manually.
+
+---
+
 ## Troubleshooting local runs
 
 If the extension does not behave as expected when running locally, try the following first:
@@ -137,7 +159,7 @@ If the extension does not behave as expected when running locally, try the follo
 
 - If you are debugging activation or LSP issues, open the Output panel and switch to the `HAProxy` channel. For more detailed logs, use `HAProxy (Trace)`.
 - To restart the language server after changing server-side code, run the command `HAProxy: Restart Language Server` from the Command Palette.
-- On Windows, the first local run can fail with a PowerShell execution policy error. If you see a message about scripts being blocked, open PowerShell as Administrator and run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then reopen VS Code and try `F5` again.
+- On Windows, the first local run can fail with a PowerShell execution policy error. If you see a message about scripts being blocked, open PowerShell and run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then reopen VS Code and try `F5` again. Use the narrowest scope that fixes the local development shell.
 - A common cause of confusing local results is stale bundles in `client/out` or `server/out`. Re-running `npm run build` usually clears this up.
 
 ---
