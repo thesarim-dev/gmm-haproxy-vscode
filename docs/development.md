@@ -137,7 +137,7 @@ If the extension does not behave as expected when running locally, try the follo
 
 - If you are debugging activation or LSP issues, open the Output panel and switch to the `HAProxy` channel. For more detailed logs, use `HAProxy (Trace)`.
 - To restart the language server after changing server-side code, run the command `HAProxy: Restart Language Server` from the Command Palette.
-- On Windows, the first local run can fail with a PowerShell execution policy error. If you see a message about scripts being blocked, open PowerShell and run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then reopen VS Code and try `F5` again. Use the narrowest scope that fixes the local development shell.
+- On Windows, the first local run can fail with a PowerShell execution policy error. First inspect the active policies with `Get-ExecutionPolicy -List`. If only your user shell needs to allow local scripts, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then reopen VS Code and try `F5` again. Do not use an elevated Administrator shell unless you intentionally need to change the machine-wide `LocalMachine` policy.
 - A common cause of confusing local results is stale bundles in `client/out` or `server/out`. Re-running `npm run build` usually clears this up.
 
 ---
